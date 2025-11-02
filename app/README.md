@@ -1,2 +1,2 @@
 # FaraVault
-Local digital safe for managing and encrypting API keys
+Web application to manage and safely encrypt API keys and other sensitive secrets
