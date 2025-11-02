@@ -49,12 +49,25 @@ class APIList(Resource):
         )
 
         user_key = user.get_encryption_key()
-        
+
         if data.get('secret_key'):
             api.set_secret_key(data['secret_key'], user_key)
         if data.get('public_key'):
             api.set_public_key(data['public_key'], user_key)
-        
+
         api.save()
 
         return api.to_dict(), 201
+
+    @api.response(200, 'List of APIs retrieved successfully')
+    @api.response(404, 'User not found')
+    @jwt_required()
+    def get(self):
+        """Retrieve all APIs for the current user"""
+        current_user_id = get_jwt_identity()
+        user = User.query.get(current_user_id)
+        if not user:
+            return {'error': 'User not found'}, 404
+        
+        apis = API.query.filter_by(user_id=current_user_id).all()
+        return {'apis': [api.to_dict() for api in apis]}, 200
