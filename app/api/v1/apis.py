@@ -1,9 +1,7 @@
 from flask import request
 from flask_restx import Namespace, Resource, fields
 from flask_jwt_extended import jwt_required, get_jwt_identity
-from app.models.api import API
-from app.models.user import User
-from app.utils.crypto import encrypt, decrypt, generate_key
+from app.services.facade import FaraVault
 
 
 api = Namespace('apis', description='APIs operations')
@@ -24,6 +22,8 @@ api_model = api.model('APIs', {
 
 })
 
+facade = FaraVault()
+
 @api.route('/')
 class APIList(Resource):
     @api.expect(api_model)
@@ -34,30 +34,7 @@ class APIList(Resource):
         "Register a new API"
         current_user_id = get_jwt_identity()
         data = request.get_json()
-
-        if not data.get('secret_key') and not data.get('public_key'):
-            return {'error': 'At least one key must be provided'}, 400
-        
-        user = User.query.get(current_user_id)
-        if not user:
-            return {'error': 'User not found'}, 404
-        
-        api = API(
-            name = data['name'],
-            description = data.get('description', ''),
-            user = user
-        )
-
-        user_key = user.get_encryption_key()
-
-        if data.get('secret_key'):
-            api.set_secret_key(data['secret_key'], user_key)
-        if data.get('public_key'):
-            api.set_public_key(data['public_key'], user_key)
-
-        api.save()
-
-        return api.to_dict(), 201
+        return facade.create_api(current_user_id, data)
 
     @api.response(200, 'List of APIs retrieved successfully')
     @api.response(404, 'User not found')
@@ -65,9 +42,14 @@ class APIList(Resource):
     def get(self):
         """Retrieve all APIs for the current user"""
         current_user_id = get_jwt_identity()
-        user = User.query.get(current_user_id)
-        if not user:
-            return {'error': 'User not found'}, 404
-        
-        apis = API.query.filter_by(user_id=current_user_id).all()
-        return {'apis': [api.to_dict() for api in apis]}, 200
+        return facade.get_apis(current_user_id)
+
+@api.route('/<string:api_id>')
+class APIResource(Resource):
+    @api.response(200, 'API retrived successfully')
+    @api.response(404, 'API not found')
+    @jwt_required()
+    def get(self, api_id):
+        """Retrieve an API by ID"""
+        current_user_id = get_jwt_identity()
+        return facade.get_api(current_user_id, api_id)
