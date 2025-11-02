@@ -29,8 +29,27 @@ class FaraVault:
 
     def get_all_apis(self, user):
         """Retrieve all API of the user"""
-        pass
+        all_apis = self.api_repo.get_all()
+        filtered = [api for api in all_apis if api.user_id == user.id]
+        return filtered
 
     def get_api_by_id(self, user, api_id):
         """Retrieve an precise API"""
+        api = self.api_repo.get_by_id(api_id)
+        if not api or api.user_id != user.id:
+            raise ValueError('API not found or unauthorized')
+        return api
+    
+    def update_api(self, user, api_id, data):
+        """Update an existing API"""
+        # Vérifier que l'API existe et appartient à l'utilisateur
+        api = self.get_api_by_id(user, api_id)
+        # Mettre à jour name, description, secret_key, public_key si présents
+        # Re-chiffrer les clés si nécessaire
+        # Sauvegarder et retourner l'objet
         pass
+
+    def delete_api(self, user, api_id):
+        """Delete an API"""
+        api = self.get_api_by_id(user, api_id)
+        self.api_repo.delete(api)
